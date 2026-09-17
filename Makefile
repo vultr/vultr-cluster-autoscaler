@@ -1,6 +1,6 @@
 GOOS ?= linux
 GOARCH ?= $(shell go env GOARCH)
-IMAGE ?= vultr/cluster-autoscaler
+IMAGE ?= vultr/vultr-cluster-autoscaler
 TAG ?= dev
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 VERSION_PACKAGE := github.com/vultr/vultr-cluster-autoscaler/version

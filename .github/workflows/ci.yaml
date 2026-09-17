@@ -18,3 +18,9 @@ jobs:
           go-version-file: go.mod
           cache: true
       - run: make verify
+      - name: Validate release configuration
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: check

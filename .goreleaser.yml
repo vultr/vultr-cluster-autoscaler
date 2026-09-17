@@ -1,0 +1,64 @@
+version: 2
+
+project_name: vultr-cluster-autoscaler
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: cluster-autoscaler
+    main: .
+    binary: cluster-autoscaler
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/vultr/vultr-cluster-autoscaler/version.ClusterAutoscalerVersion={{ .Tag }}
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - none*
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
+  algorithm: sha256
+
+dockers_v2:
+  - id: cluster-autoscaler
+    ids:
+      - cluster-autoscaler
+    dockerfile: Dockerfile.goreleaser
+    images:
+      - vultr/vultr-cluster-autoscaler
+    tags:
+      - "{{ .Tag }}"
+      - latest
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    labels:
+      org.opencontainers.image.created: "{{ .Date }}"
+      org.opencontainers.image.description: Vultr-only Kubernetes Cluster Autoscaler
+      org.opencontainers.image.licenses: Apache-2.0
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.source: "{{ .GitURL }}"
+      org.opencontainers.image.title: Vultr Cluster Autoscaler
+      org.opencontainers.image.version: "{{ .Tag }}"
+    sbom: true
+
+changelog:
+  use: github-native
+
+release:
+  draft: false

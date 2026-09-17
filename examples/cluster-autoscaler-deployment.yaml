@@ -103,7 +103,7 @@ spec:
       serviceAccountName: cluster-autoscaler
       containers:
         - name: cluster-autoscaler
-          image: vultr/cluster-autoscaler:latest
+          image: vultr/vultr-cluster-autoscaler:latest
           imagePullPolicy: IfNotPresent
           args:
             - --cloud-config=/config/cloud-config

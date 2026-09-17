@@ -39,8 +39,23 @@ make verify
 Build a container image with:
 
 ```shell
-make image IMAGE=registry.example.com/vultr/cluster-autoscaler TAG=dev
+make image IMAGE=vultr/vultr-cluster-autoscaler TAG=dev
 ```
+
+## Release
+
+Releases publish Linux amd64 and arm64 archives to GitHub and a multi-architecture
+`vultr/vultr-cluster-autoscaler` image to Docker Hub. A release can be started in either
+of these ways:
+
+- Merge a commit to `main` with the exact subject `Release vX.Y.Z #patch`, replacing
+  `patch` with `minor` or `major` as appropriate.
+- Run the `Release` workflow manually from `main` and provide a `vX.Y.Z` tag.
+
+The workflow creates an annotated tag, publishes the GitHub release and checksums, then
+publishes both the version tag and `latest` Docker image manifest. Repository secrets
+named `DOCKER_USERNAME` and `DOCKER_PASSWORD` must contain Docker Hub credentials with
+permission to push the image.
 
 ## Configuration
 

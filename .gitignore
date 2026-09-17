@@ -1,5 +1,6 @@
 /cluster-autoscaler
 /cluster-autoscaler-*
+/dist/
 /.idea/
 /.vscode/
 *.swp

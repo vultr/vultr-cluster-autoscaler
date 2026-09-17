@@ -1,0 +1,5 @@
+FROM gcr.io/distroless/static:nonroot
+ARG TARGETPLATFORM
+COPY ${TARGETPLATFORM}/cluster-autoscaler /cluster-autoscaler
+WORKDIR /
+ENTRYPOINT ["/cluster-autoscaler"]
