@@ -1,0 +1,5 @@
+/cluster-autoscaler
+/cluster-autoscaler-*
+/.idea/
+/.vscode/
+*.swp
