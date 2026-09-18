@@ -88,8 +88,34 @@ func (v *vultrCloudProvider) NodeGroupForNode(_ context.Context, node *apiv1.Nod
 
 // HasInstance reports whether node belongs to a known VKE node pool.
 func (v *vultrCloudProvider) HasInstance(ctx context.Context, node *apiv1.Node) (bool, error) {
-	nodeGroup, err := v.NodeGroupForNode(ctx, node)
-	return nodeGroup != nil, err
+	nodeID, err := nodeIDFromNode(node)
+	if err != nil {
+		if errors.Is(err, errMissingNodeID) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	for _, group := range v.manager.nodeGroups {
+		if group.hasNode(nodeID) {
+			return true, nil
+		}
+	}
+
+	// Nodes in pools not managed by this autoscaler still exist in Vultr.
+	nodePools, _, _, err := v.manager.client.ListNodePools(ctx, v.manager.clusterID, nil)
+	if err != nil {
+		return true, err
+	}
+	for _, nodePool := range nodePools {
+		for _, poolNode := range nodePool.Nodes {
+			if poolNode.ID == nodeID {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }
 
 // Pricing is not supported by VKE.

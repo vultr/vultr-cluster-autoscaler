@@ -5,9 +5,9 @@ go 1.26.0
 godebug default=go1.26
 
 require (
-	github.com/google/go-querystring v1.1.0
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.12.0
+	github.com/vultr/govultr/v3 v3.33.0
 	golang.org/x/oauth2 v0.36.0
 	k8s.io/api v0.37.0-rc.1
 	k8s.io/apimachinery v0.37.0-rc.1
@@ -60,9 +60,12 @@ require (
 	github.com/google/cel-go v0.29.2 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
+	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20260402051712-545e8a4df936 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect

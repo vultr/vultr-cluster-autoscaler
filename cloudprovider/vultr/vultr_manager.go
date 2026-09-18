@@ -24,14 +24,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/vultr/vultr-cluster-autoscaler/cloudprovider/vultr/govultr"
+	"github.com/vultr/govultr/v3"
 	"golang.org/x/oauth2"
 	"k8s.io/klog/v2"
 )
 
 type vultrClient interface {
-	ListNodePools(ctx context.Context, vkeID string, options *govultr.ListOptions) ([]govultr.NodePool, *govultr.Meta, error)
-	UpdateNodePool(ctx context.Context, vkeID, nodePoolID string, updateReq *govultr.NodePoolReqUpdate) (*govultr.NodePool, error)
+	ListNodePools(ctx context.Context, vkeID string, options *govultr.ListOptions) ([]govultr.NodePool, *govultr.Meta, *http.Response, error)
+	UpdateNodePool(ctx context.Context, vkeID, nodePoolID string, updateReq *govultr.NodePoolReqUpdate) (*govultr.NodePool, *http.Response, error)
 	DeleteNodePoolInstance(ctx context.Context, vkeID, nodePoolID, nodeID string) error
 }
 
@@ -68,22 +68,26 @@ func newManager(config io.Reader) (*manager, error) {
 			Source: tokenSource,
 		},
 	}
+	client := govultr.NewClient(httpClient)
+	client.SetUserAgent("vultr-cluster-autoscaler")
 	return &manager{
-		client:     govultr.NewClient(httpClient),
+		client:     client.Kubernetes,
 		nodeGroups: make([]*NodeGroup, 0),
 		clusterID:  cfg.ClusterID,
 	}, nil
 }
 
 func (m *manager) refresh(ctx context.Context) error {
-	nodePools, _, err := m.client.ListNodePools(ctx, m.clusterID, nil)
+	nodePools, _, _, err := m.client.ListNodePools(ctx, m.clusterID, nil)
 	if err != nil {
 		return err
 	}
 
-	previousTargets := make(map[string]int, len(m.nodeGroups))
+	pendingTargets := make(map[string]int, len(m.nodeGroups))
 	for _, nodeGroup := range m.nodeGroups {
-		previousTargets[nodeGroup.id] = nodeGroup.nodePool.NodeQuantity
+		if nodeGroup.pendingTargetSize > 0 {
+			pendingTargets[nodeGroup.id] = nodeGroup.pendingTargetSize
+		}
 	}
 
 	groups := make([]*NodeGroup, 0, len(nodePools))
@@ -93,19 +97,22 @@ func (m *manager) refresh(ctx context.Context) error {
 		}
 		klog.V(3).Infof("adding node pool %q with min nodes %d and max nodes %d", nodePool.Label, nodePool.MinNodes, nodePool.MaxNodes)
 
-		if previousTarget, ok := previousTargets[nodePool.ID]; ok && previousTarget > nodePool.NodeQuantity && len(nodePool.Nodes) < previousTarget {
-			klog.V(4).Infof("preserving in-flight target size for node pool %q: Vultr target %d, previous target %d, existing nodes %d", nodePool.ID, nodePool.NodeQuantity, previousTarget, len(nodePool.Nodes))
-			nodePool.NodeQuantity = previousTarget
+		pendingTargetSize := 0
+		if pendingTarget, ok := pendingTargets[nodePool.ID]; ok && pendingTarget > nodePool.NodeQuantity && len(nodePool.Nodes) < pendingTarget {
+			klog.V(4).Infof("preserving in-flight target size for node pool %q: Vultr target %d, pending target %d, existing nodes %d", nodePool.ID, nodePool.NodeQuantity, pendingTarget, len(nodePool.Nodes))
+			nodePool.NodeQuantity = pendingTarget
+			pendingTargetSize = pendingTarget
 		}
 
 		np := nodePool
 		groups = append(groups, &NodeGroup{
-			id:        nodePool.ID,
-			clusterID: m.clusterID,
-			client:    m.client,
-			nodePool:  &np,
-			minSize:   nodePool.MinNodes,
-			maxSize:   nodePool.MaxNodes,
+			id:                nodePool.ID,
+			clusterID:         m.clusterID,
+			client:            m.client,
+			nodePool:          &np,
+			minSize:           nodePool.MinNodes,
+			maxSize:           nodePool.MaxNodes,
+			pendingTargetSize: pendingTargetSize,
 		})
 	}
 	m.nodeGroups = groups

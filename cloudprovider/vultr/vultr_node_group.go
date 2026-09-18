@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/vultr/vultr-cluster-autoscaler/cloudprovider/vultr/govultr"
+	"github.com/vultr/govultr/v3"
 	apiv1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/cluster-autoscaler/pkg/cloudprovider"
 	"sigs.k8s.io/cluster-autoscaler/pkg/config"
@@ -44,6 +44,9 @@ type NodeGroup struct {
 	nodePool  *govultr.NodePool
 	minSize   int
 	maxSize   int
+
+	// pendingTargetSize is set only for scale-ups initiated by this provider.
+	pendingTargetSize int
 }
 
 // MaxSize returns the maximum node pool size.
@@ -67,7 +70,7 @@ func (n *NodeGroup) IncreaseSize(ctx context.Context, delta int) error {
 		return fmt.Errorf("size increase is too large. current: %d desired: %d max: %d", n.nodePool.NodeQuantity, targetSize, n.MaxSize(ctx))
 	}
 
-	updatedNodePool, err := n.client.UpdateNodePool(ctx, n.clusterID, n.id, &govultr.NodePoolReqUpdate{NodeQuantity: targetSize})
+	updatedNodePool, _, err := n.client.UpdateNodePool(ctx, n.clusterID, n.id, &govultr.NodePoolReqUpdate{NodeQuantity: targetSize})
 	if err != nil {
 		return err
 	}
@@ -76,6 +79,7 @@ func (n *NodeGroup) IncreaseSize(ctx context.Context, delta int) error {
 	}
 
 	n.nodePool.NodeQuantity = targetSize
+	n.pendingTargetSize = targetSize
 	return nil
 }
 
@@ -98,6 +102,7 @@ func (n *NodeGroup) DeleteNodes(ctx context.Context, nodes []*apiv1.Node) error 
 			return fmt.Errorf("deleting node failed for cluster %q, node pool %q, node %q: %w", n.clusterID, n.id, nodeID, err)
 		}
 		n.nodePool.NodeQuantity--
+		n.pendingTargetSize = 0
 	}
 	return nil
 }
@@ -120,7 +125,7 @@ func (n *NodeGroup) DecreaseTargetSize(ctx context.Context, delta int) error {
 		return fmt.Errorf("cannot decrease target size below existing nodes. current target: %d desired: %d existing nodes: %d", n.nodePool.NodeQuantity, targetSize, len(n.nodePool.Nodes))
 	}
 
-	updatedNodePool, err := n.client.UpdateNodePool(ctx, n.clusterID, n.id, &govultr.NodePoolReqUpdate{NodeQuantity: targetSize})
+	updatedNodePool, _, err := n.client.UpdateNodePool(ctx, n.clusterID, n.id, &govultr.NodePoolReqUpdate{NodeQuantity: targetSize})
 	if err != nil {
 		return err
 	}
@@ -128,6 +133,7 @@ func (n *NodeGroup) DecreaseTargetSize(ctx context.Context, delta int) error {
 		return fmt.Errorf("couldn't decrease size to %d (delta: %d). Current size is: %d", targetSize, delta, updatedNodePool.NodeQuantity)
 	}
 	n.nodePool.NodeQuantity = targetSize
+	n.pendingTargetSize = 0
 	return nil
 }
 

@@ -87,6 +87,7 @@ The provider implementation and release lifecycle live in this repository. Gener
 autoscaling behavior comes from `sigs.k8s.io/cluster-autoscaler`, pinned in `go.mod`.
 Kubernetes module replacements are intentionally kept aligned with that core version.
 When upgrading core, upgrade the Kubernetes modules and test the provider as one change.
+Vultr API operations use the official `github.com/vultr/govultr/v3` client.
 
 The upstream core currently selects registered providers by name. For that reason the
 binary still exposes `--cloud-provider`, but Vultr is the only registered value and is
